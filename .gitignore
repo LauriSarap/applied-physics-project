@@ -1,0 +1,7 @@
+.vscode/
+.idea/
+.micropico
+desktop.ini
+*.pdf
+*.csv
+*.json
