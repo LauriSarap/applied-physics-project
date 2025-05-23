@@ -3,6 +3,7 @@ import csv, json, math
 ROWS, COLS = 16, 15
 MAX_EVENTS = 1000
 DETECTOR_LEVELS = [1, 2, 3]
+TAKE_ALL_EVENTS = False
 
 TIME_COL = 0
 X_COL = 1
@@ -120,7 +121,7 @@ for t_ns in events_by_time:
     hits.append([t_sec, row, col, rgb])
     
     event_count += 1
-    if event_count >= MAX_EVENTS:
+    if event_count >= MAX_EVENTS and not TAKE_ALL_EVENTS:
         break
 
 if hits:
@@ -132,6 +133,9 @@ if hits:
         print(f"Time range: {hits[0][0]:.2f}s to {hits[-1][0]:.2f}s")
         print(f"Angle range: {min(angles):.4f} to {max(angles):.4f} radians")
         print(f"Color mapping: 0 radians -> blue, π/2 radians -> green, π radians -> red")
-    print(f"(Limited to first {MAX_EVENTS} complete events)")
+    if not TAKE_ALL_EVENTS:
+        print(f"(Limited to first {MAX_EVENTS} complete events)")
+    else:
+        print(f"Processed all {event_count} complete events")
 else:
     print(f"No events found with all required detector levels: {DETECTOR_LEVELS}")
