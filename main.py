@@ -18,16 +18,12 @@ WAVE_LIGHT_DURATION = 120
 FADE_STEPS = 10
 FADE_INTERVAL = 40
 
-# Simple mode settings
-CHANCE_OF_SPECIAL_COLOR_IN_SIMPLE_MODE = 0.1
-MAX_TIME_BETWEEN_HITS_IN_SIMPLE_MODE = 5 # seconds
-
-SPECIAL_COLORS = [
-    (255, 0, 0),    # Red
-    (255, 105, 180), # Pink
-    (0, 255, 0),    # Green
-    (255, 165, 0)   # Orange
-]
+# Normal mode delays
+NORMAL_MODE_MIN_DELAY = 2  # seconds
+NORMAL_MODE_MAX_DELAY = 5  # seconds
+# Corner mode delays
+CORNER_MODE_MIN_DELAY = 5  # seconds
+CORNER_MODE_MAX_DELAY = 10  # seconds
 
 
 def scale(rgb: tuple, boost: float = 1.0) -> tuple:
@@ -284,7 +280,7 @@ def display_hit_effect(row, col, color):
     stripB.write()
 
 
-def play_visualization(hits, is_timed=True):
+def play_visualization(hits, is_in_corner=False):
     global active_hits, active_vertical_leds
     
     active_hits = {}
@@ -294,32 +290,27 @@ def play_visualization(hits, is_timed=True):
         return
     
     processed_hits = []
+    current_time = 0
     
-    if not is_timed:
-        current_time = 0
-        for hit in hits:
-            _, row, col, color = hit
-            
-            if urandom.random() < CHANCE_OF_SPECIAL_COLOR_IN_SIMPLE_MODE:
-                color_index = urandom.randint(0, len(SPECIAL_COLORS) - 1)
-                color = SPECIAL_COLORS[color_index]
-            
-            random_delay = urandom.uniform(2, 5) * 1000
-            current_time += random_delay
-            
-            processed_hits.append([current_time, row, col, color])
+    # Valime osakeste vahe vastavalt sellele, kas visualiseering asub detektori nurgas või keskel
+    # Jätame andmete ajafaktori täiesti välja, sest niimoodi sai visuaalselt parima tulemuse.
+    if is_in_corner:
+        min_delay = CORNER_MODE_MIN_DELAY
+        max_delay = CORNER_MODE_MAX_DELAY
     else:
-        for hit in hits:
-            if len(hit) < 3:
-                continue
-                
-            t_sec = hit[0]
-            row = hit[1]
-            col = hit[2]
-            color = hit[3]
+        min_delay = NORMAL_MODE_MIN_DELAY
+        max_delay = NORMAL_MODE_MAX_DELAY
+    
+    for hit in hits:
+        if len(hit) < 4:
+            continue
             
-            t_ms = t_sec * 1000
-            processed_hits.append([t_ms, row, col, color])
+        _, row, col, color = hit
+        
+        random_delay = urandom.uniform(min_delay, max_delay) * 1000
+        current_time += random_delay
+        
+        processed_hits.append([current_time, row, col, color])
     
     start_ms = time.ticks_ms()
     next_index = 0
@@ -341,12 +332,12 @@ def play_visualization(hits, is_timed=True):
     clear()
 
 
-def play_hits(filename="hits.json", is_timed=True):
+def play_hits(filename="hits.json", is_in_corner=False):
     if filename not in os.listdir():
         raise OSError(f"{filename} not found on Pico flash")
 
     hits = ujson.load(open(filename))
-    play_visualization(hits, is_timed)
+    play_visualization(hits, is_in_corner)
 
 try:
     clear()
@@ -354,7 +345,7 @@ try:
     # NB! Siia oleks vaja nupu loogikat, et
     # nad ei peaks ise scripti muutma, et režiimi vahetada
 
-    play_hits(is_timed=False)
+    play_hits(is_in_corner=True)
 finally:
     clear()
     

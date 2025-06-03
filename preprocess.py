@@ -1,7 +1,7 @@
 import csv, json, math
 
 ROWS, COLS = 16, 15
-MAX_EVENTS = 1000
+MAX_EVENTS = 50
 DETECTOR_LEVELS = [1, 2, 3]
 TAKE_ALL_EVENTS = False
 
@@ -13,7 +13,8 @@ DETECTOR_COL = 7
 xmin = ymin = math.inf
 xmax = ymax = -math.inf
 
-# X-Y range computation
+# X-Y vahemiku arvutamine
+# Skaleerime kogu 1x2 m meie 16x15 ruudustikule
 with open("gscan_example_data.csv", newline="", encoding='utf-8') as f:
     reader = csv.reader(f)
     for row in reader:
@@ -32,6 +33,7 @@ with open("gscan_example_data.csv", newline="", encoding='utf-8') as f:
                 
 print(f"Full dataset range: X: {xmin} to {xmax}, Y: {ymin} to {ymax}")
 
+# Kahe vektroi vaheline nurk koosinuse abil
 def calculate_angle_2d(p1, p2, p3):
     v1 = [p2[0] - p1[0], p2[1] - p1[1]]
     v2 = [p3[0] - p2[0], p3[1] - p2[1]]
@@ -49,21 +51,18 @@ def calculate_angle_2d(p1, p2, p3):
     
     return math.acos(cos_angle)
 
+# Diskreetsed osakeste jaotused hajumisnurga järgi
+# Värvid vastavad (vahemik on 0-pi radiaani ehk 0-180 kraadi)
+# 0 - 0.06 -> sinine
+# 0.06 - 0.12 -> punane
+# 0.12 - edasi -> jätame andmestikust välja
 def angle_to_rgb(angle):
-    normalized = angle / math.pi
-    
-    if normalized < 0.5:
-        ratio = normalized * 2
-        r = 0
-        g = int(255 * ratio)
-        b = int(255 * (1 - ratio))
+    if angle < 0.06:
+        return [0, 0, 255]
+    elif angle < 0.12:
+        return [255, 0, 0]
     else:
-        ratio = (normalized - 0.5) * 2
-        r = int(255 * ratio)
-        g = int(255 * (1 - ratio))
-        b = 0
-    
-    return [r, g, b]
+        return None
 
 events_by_time = {}
 first_timestamp = None
@@ -107,6 +106,11 @@ for t_ns in events_by_time:
     pos3 = event[3]
     
     angle = calculate_angle_2d(pos1, pos2, pos3)
+    
+    # Jätame välja osakese, mille hajumisnurk > 0.12 radiaani
+    if angle > 0.12:
+        continue
+    
     angles.append(angle)
     
     rgb = angle_to_rgb(angle)
@@ -128,11 +132,10 @@ if hits:
     with open("hits.json", "w") as out:
         json.dump(hits, out)
 
-    print(f"Processed events: {len(hits)}")
     if hits:
-        print(f"Time range: {hits[0][0]:.2f}s to {hits[-1][0]:.2f}s")
+        print(f"Particles with angles > 0.12 radians are excluded from the dataset")
         print(f"Angle range: {min(angles):.4f} to {max(angles):.4f} radians")
-        print(f"Color mapping: 0 radians -> blue, π/2 radians -> green, π radians -> red")
+        print(f"Color mapping: 0-0.06 radians -> blue, 0.06-0.12 radians -> red")
     if not TAKE_ALL_EVENTS:
         print(f"(Limited to first {MAX_EVENTS} complete events)")
     else:

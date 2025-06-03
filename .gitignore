@@ -6,3 +6,5 @@ desktop.ini
 *.csv
 *.json
 *.png
+venv/
+__pycache__/

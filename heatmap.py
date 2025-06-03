@@ -177,7 +177,7 @@ def main():
         try:
             global DELAY_MODE_INTERVAL
             interval = float(input(f"Enter delay between hits in seconds (default {DELAY_MODE_INTERVAL}): ") or DELAY_MODE_INTERVAL)
-            DELAY_MODE_INTERVAL = max(0.1, interval)
+            DELAY_MODE_INTERVAL = max(0.01, interval)
         except ValueError:
             print(f"Using default interval: {DELAY_MODE_INTERVAL}s")
     
